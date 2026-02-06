@@ -3,13 +3,17 @@ import os
 import asyncio
 from discord.ext import commands
 import database
-from threading import Thread # <--- NUEVO: Para el servidor web
-from flask import Flask      # <--- NUEVO: Para el servidor web
+from dotenv import load_dotenv
+from threading import Thread 
+from flask import Flask      
+
+# Cargar variables de entorno (busca el archivo .env si estás en tu PC)
+load_dotenv()
 
 # 1. Configuración del Bot y Permisos
 intents = discord.Intents.default()
 intents.message_content = True 
-intents.members = True # NECESARIO para que el bot pueda dar y quitar roles (Modo Misión)
+intents.members = True 
 
 bot = commands.Bot(command_prefix='!', intents=intents)
 
@@ -29,22 +33,20 @@ def keep_alive():
 # --------------------------------------------------
 
 # --- CONFIGURACIÓN CENTRAL DE CANALES (IDs) ---
-# El bot usará estos IDs para saber dónde permitir cada comando.
 bot.CHANNELS = {
-    "database": 1469181782976102442,   # ID del canal #hunter-database
-    "simulation": 1469181844951011510, # ID del canal #simulation-room
-    "mission": 1469418192609874064,    # ID del canal #mission-zone
-    "lab": 1469181934105006152,        # ID del canal #hunter-lab
-    "boss": 1469181984353026142,       # ID del canal #sigma-virus-alert
-    "rank": 1469182027948359680        # ID del canal #rank-board
+    "database": 1469181782976102442,   
+    "simulation": 1469181844951011510, 
+    "mission": 1469418192609874064,    
+    "lab": 1469181934105006152,        
+    "boss": 1469181984353026142,       
+    "rank": 1469182027948359680        
 }
 
 # Configuración del Rol para el Modo Misión
 bot.MISSION_ROLE_NAME = "En misión" 
 
-# 2. Función para cargar las extensiones (Cogs) automáticamente
+# 2. Función para cargar las extensiones (Cogs)
 async def load_extensions():
-    # Busca archivos .py en la carpeta 'cogs'
     if os.path.exists('./cogs'):
         for filename in os.listdir('./cogs'):
             if filename.endswith('.py'):
@@ -59,9 +61,7 @@ async def load_extensions():
 # 3. Evento de arranque
 @bot.event
 async def on_ready():
-    # Inicializar la base de datos al encender
     database.init_db()
-    
     print('-----------------------------------------')
     print(f'✅ Sistema Principal en línea: {bot.user.name}')
     print(f'🆔 ID: {bot.user.id}')
@@ -75,11 +75,19 @@ async def on_ready():
 async def main():
     async with bot:
         await load_extensions()
-        # TU TOKEN (Ya incluido)
-        await bot.start('MTQ2OTE4NTgzMjE5NDgwNTc4MA.GYuzL2.5urj_7rCmbd1CARHs7C9vEOGIPzqsrSbhByDRw')
+        
+        # --- SEGURIDAD: LEER TOKEN DE VARIABLE DE ENTORNO ---
+        token = os.getenv('DISCORD_TOKEN')
+        
+        if not token:
+            print("❌ ERROR FATAL: No se encontró el token.")
+            print("Asegúrate de configurar la variable DISCORD_TOKEN en Render o en tu archivo .env")
+            return
+            
+        await bot.start(token)
 
 if __name__ == '__main__':
-    keep_alive() # <--- ARRANCA EL SERVIDOR WEB ANTES QUE EL BOT
+    keep_alive() 
     try:
         asyncio.run(main())
     except KeyboardInterrupt:
